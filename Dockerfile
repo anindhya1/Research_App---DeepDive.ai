@@ -12,5 +12,7 @@ COPY . .
 RUN mkdir -p static/exports templates
 
 ENV PYTHONUNBUFFERED=1
+ENV FLASK_RUN_HOST=0.0.0.0
+ENV FLASK_RUN_PORT=8000
 
-CMD gunicorn --worker-class gevent --workers 1 --timeout 300 --bind 0.0.0.0:8000 wsgi:app
+CMD ["python", "app.py"]

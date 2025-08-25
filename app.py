@@ -134,5 +134,5 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    port = int(os.getenv('FLASK_RUN_PORT', 8000))
+    app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
