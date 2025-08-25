@@ -8,6 +8,11 @@ INSTRUCTIONS = (
     "flow of the report. Then, generate the report and return that as your final output.\n"
     "The final output should be in markdown format, and it should be lengthy and detailed. Aim "
     "for 5-10 pages of content, at least 1000 words."
+    "FORMATTING REQUIREMENTS:\n"
+    "- Create a table of contents with clickable links: [Section Name](#section-name)\n"
+    "- Use header IDs: ## Executive Summary {#executive-summary}\n"
+    "- Include working links to sources: [Source Title](URL)\n"
+    "- Add back-to-top links: [↑ Back to Contents](#table-of-contents)\n"
 )
 
 

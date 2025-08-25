@@ -678,11 +678,11 @@ void main() {
         // Handle form submission
         submitBtn.addEventListener('click', startResearch);
         queryInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.ctrlKey) {
-                e.preventDefault();
-                startResearch();
-            }
-        });
+			if (e.key === 'Enter' && !e.shiftKey) {
+				e.preventDefault();
+				startResearch();
+			}
+		});
 
         async function startResearch() {
 			lastPdfUrl = null;         // forget any previous report
