@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #shader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        #gradio-app {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: 100vh;
+            background: transparent;
+        }
+        
+        /* Make Gradio components semi-transparent with backdrop blur */
+        .gradio-container {
+            background: rgba(15, 23, 42, 0.85) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        /* Style Gradio components */
+        .gr-box, .gr-form, .gr-panel {
+            background: rgba(30, 41, 59, 0.6) !important;
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        
+        .gr-button-primary {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(37, 99, 235, 0.8)) !important;
+            border: 1px solid rgba(59, 130, 246, 0.3) !important;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        
+        .gr-button-primary:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9)) !important;
+        }
+        
+        label.gr-label {
+            color: rgba(226, 232, 240, 0.95) !important;
+        }
+        
+        .gr-input, .gr-text-input, textarea {
+            background: rgba(15, 23, 42, 0.7) !important;
+            border: 1px solid rgba(148, 163, 184, 0.3) !important;
+            color: rgba(226, 232, 240, 0.95) !important;
+        }
+        
+        .markdown-text {
+            background: rgba(15, 23, 42, 0.8) !important;
+            padding: 1rem !important;
+            border-radius: 8px !important;
+            color: rgba(226, 232, 240, 0.95) !important;
+        }
+        
+        h1 {
+            color: rgba(248, 250, 252, 0.95) !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.1/p5.js"></script>
+</head>
+<body>
+    <div id="shader-container"></div>
+    <div id="gradio-app"></div>
+    
+    <script>
+        // Shader code
+        let theShader, dpr = window.devicePixelRatio, ww = window.innerWidth*dpr, wh = window.innerHeight*dpr;
+        
+        // Vertex shader as string
+        const vertShaderStr = `#version 300 es 
+in vec3 aPosition; 
+void main() { 
+    gl_Position=vec4(aPosition*2.-1., 1.0); 
+}`;
+        
+        // Fragment shader as string
+        const fragShaderStr = `#version 300 es
+precision highp float;
+out vec4 O;
+uniform float time;
+uniform vec2 resolution;
+#define FC gl_FragCoord.xy
+#define R resolution
+#define T ((3600.+time)*.8)
+#define S smoothstep
+#define SE(v,s) S(s+1./MN,s-1./MN,v)
+#define MN min(R.x,R.y)
+#define lum(a) vec3(dot(vec3(.21,.71,.07),a))
+#define hue(a) (.25+.6*cos(3.14*clamp(a,2.8,3.6)+vec3(0,83,21)))
+#define rot(a) mat2(cos((a)-vec4(0,11,33,0)))
+
+float rnd(vec2 p) {
+    p=fract(p*vec2(12.9898,78.233));
+    p+=dot(p,p+34.56);
+    return fract(p.x*p.y);
+}
+
+float noise(vec2 p) {
+    vec2 i=floor(p), f=fract(p), u=f*f*(3.-2.*f);
+    float a=rnd(i), b=rnd(i+vec2(1,0)), c=rnd(i+vec2(0,1)), d=rnd(i+1.);
+    return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);
+}
+
+float fbm(vec2 p) {
+    float t=.0, a=1.; 
+    mat2 m=mat2(1.2,-.8,.8,1.2);
+    for (float i=.0; i<6.; i++) {
+        t+=a*noise(p);
+        p=2.*p*m;
+        a*=.5;
+    }
+    return t;
+}
+
+vec2 smin(vec2 a, vec2 b, float k) {
+    vec2 h=clamp(.5+.5*(b-a)/k,.0,1.);
+    return mix(b,a,h)-k*h*(1.-h);
+}
+
+float logo(vec2 uv) {
+    vec3 col=vec3(0);
+    uv*=5.;
+    vec2 p=vec2(sin(T+uv.y), cos(T+uv.x))*.75;
+    return 1.-SE(cos(1.9-sin(length(p)/(.55+length(uv)))),.1);
+}
+
+float placeLogo() {
+    vec2 p=FC/R;
+    p*=vec2(R.x/R.y,1);
+    p-=vec2(R.x/R.y,0);
+    p+=vec2(.08,-.075);
+    return logo(p*12.);
+}
+
+void main() {
+    vec2 uv=(FC-.5*R)/MN, p=(FC/MN);
+    vec3 col=vec3(0);
+    p+=vec2(2.75,-2.75);
+    p*=rot(-1.5707*2.5);
+    p=smin(p,-uv,1.5);
+    p*=rot(.39);
+    p.x+=.8;
+    p*=.5;
+    float k=fbm(p*noise(uv*.2*fbm(p-T*.2)+T*.02)+.125*fbm(T*.01-p*2.+.5*fbm(T*.03-p*3.+.5*fbm(p*6.-T*.2))));
+    vec3 d=mix(vec3(0),hue(2.8+k),k);
+    col+=lum(d)+d;
+    col/=1.+exp(-col*col*col);
+    col=pow(col,vec3(.4545));
+    p=(FC-.5*R)/R;
+    col=mix(vec3(0,.05,.2),col,pow(S(.45,.0,dot(p*p,p*p)),12.));
+    col=max(col,.1);
+    col=max(col,vec3(.1,.2,.4)*placeLogo());
+    O=vec4(col,1);
+}`;
+        
+        // p5.js sketch
+        function setup() {
+            let canvas = createCanvas(ww, wh, WEBGL);
+            canvas.parent('shader-container');
+            pixelDensity(1);
+            
+            // Create shader from strings
+            theShader = createShader(vertShaderStr, fragShaderStr);
+        }
+        
+        function draw() {
+            shader(theShader);
+            theShader.setUniform("resolution", [width, height]);
+            theShader.setUniform("time", millis() / 1000.0);
+            rect(0, 0, width, height);
+        }
+        
+        function windowResized() {
+            ww = window.innerWidth * dpr;
+            wh = window.innerHeight * dpr;
+            resizeCanvas(ww, wh);
+        }
+        
+        // Override to enable webgl2
+        p5.RendererGL.prototype._initContext = function() {
+            try {
+                this.drawingContext = this.canvas.getContext('webgl2', this._pInst._glAttributes) ||
+                    this.canvas.getContext('experimental-webgl', this._pInst._glAttributes);
+                if (this.drawingContext === null) {
+                    throw new Error('Error creating webgl context');
+                } else {
+                    const gl = this.drawingContext;
+                    gl.enable(gl.DEPTH_TEST);
+                    gl.depthFunc(gl.LEQUAL);
+                    gl.viewport(0, 0, ww, wh);
+                    this._viewport = this.drawingContext.getParameter(this.drawingContext.VIEWPORT);
+                }
+            } catch (er) {
+                throw er;
+            }
+        };
+    </script>
+</body>
+</html>

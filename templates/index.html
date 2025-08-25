@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Research</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.1/p5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            /* background-color: black; */
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #shader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            /* Fallback gradient if shader doesn't load */
+            background: linear-gradient(-45deg, #1e3a8a, #1e40af, #2563eb, #3b82f6, #60a5fa, #818cf8, #a78bfa);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .nav {
+            position: fixed;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .nav-links button {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 8px 16px;
+            transition: all 0.3s;
+            border-radius: 8px;
+        }
+
+        .nav-links button:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+
+		.nav-links button:disabled { 
+			opacity: 0.5; 
+			cursor: not-allowed; 
+		}
+
+        .hero {
+            min-height: 100vh;
+            padding: 120px 2rem 2rem;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+            overflow-y: auto;
+        }
+
+        .hero-content {
+            max-width: 900px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .hero-headline {
+            font-size: 56px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 24px;
+            line-height: 1.1;
+            letter-spacing: -1px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .hero-subheadline {
+            font-size: 24px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 48px;
+            font-weight: 400;
+            animation: fadeInUp 0.8s ease 0.1s both;
+        }
+
+        .search-container {
+            display: flex;
+            max-width: 800px;
+            margin: 0 auto 32px;
+            
+            
+            
+            animation: fadeInUp 0.8s ease 0.2s both;
+        
+            align-items: flex-start;
+            position: relative;
+            overflow: visible;
+            border-radius: 16px;}
+
+        .search-textarea {
+            flex-grow: 1;
+            padding: 20px 24px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-right: none;
+            border-radius: 16px 0 0 16px;
+            color: white;
+            font-size: 17px;
+            font-family: inherit;
+            resize: none;
+            
+            transition: height 0.15s ease, background 0.3s, border-color 0.3s;
+        
+            
+            overflow-y: hidden;
+            min-height: auto;
+            max-height: auto;}
+
+        .search-textarea::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+
+        .search-textarea:focus {
+            outline: none;
+            background: rgba(255,255,255,0.12);
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .search-button {
+            padding: 20px 40px;
+            background: linear-gradient(135deg, #0071e3, #0077ED);
+            color: white;
+            border: none;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+            letter-spacing: -0.3px;
+        
+            align-self: flex-start;
+            border-radius: 0 16px 16px 0;}
+
+        /* Prevent width shrink when label/spinner change */
+        .search-button { flex: 0 0 auto; }
+
+
+        .search-button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #0077ED, #0084FF);
+            transform: translateX(2px);
+        }
+
+        .search-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .status-message {
+            margin: 24px auto;
+            padding: 16px 24px;
+            background: rgba(59, 130, 246, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            color: rgba(147, 197, 253, 0.95);
+            max-width: 800px;
+            display: none;
+            animation: slideDown 0.5s ease;
+            font-size: 15px;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        .report-container {
+            margin: 48px auto 0;
+            max-width: 900px;
+            display: none;
+            animation: fadeIn 0.8s ease;
+        }
+
+        .report-container.active {
+            display: block;
+        }
+
+        .report-header {
+            color: white;
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            text-align: left;
+            letter-spacing: -0.5px;
+        }
+
+        .report-content {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 32px;
+            border-radius: 20px;
+            color: rgba(255,255,255,0.9);
+            max-height: 60vh;
+            overflow-y: auto;
+            line-height: 1.7;
+            text-align: left;
+            font-size: 16px;
+        }
+
+        .report-content h1, .report-content h2, .report-content h3 {
+            margin-top: 28px;
+            margin-bottom: 16px;
+            color: white;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .report-content h1 { font-size: 28px; }
+        .report-content h2 { font-size: 24px; }
+        .report-content h3 { font-size: 20px; }
+
+        .report-content p {
+            margin-bottom: 16px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .report-content ul, .report-content ol {
+            margin-left: 24px;
+            margin-bottom: 16px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .report-content code {
+            background: rgba(59, 130, 246, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            font-size: 14px;
+        }
+
+        .report-content pre {
+            background: rgba(0,0,0,0.4);
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+
+        .report-content a, .report-content a:visited {  color: inherit;  text-decoration: underline;  text-decoration-thickness: 1.5px;  text-underline-offset: 2px;}
+
+        .report-content a:hover, .report-content a:focus {  text-decoration: underline;  text-decoration-color: rgba(255,255,255,0.95);}
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .report-content a:focus-visible {  outline: 2px solid rgba(255,255,255,0.35);  outline-offset: 2px;}
+
+.status-message a {  color: rgba(255,255,255,0.95) !important;  text-decoration: underline;  text-underline-offset: 2px;}
+
+/* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .search-container::before { right: 0; border-radius: 16px; }
+
+            .hero-headline { font-size: 36px; }
+            .hero-subheadline { font-size: 18px; }
+            .search-container { flex-direction: column; border-radius: 16px; }
+            .search-textarea { border-radius: 16px 16px 0 0; border-right: 1px solid rgba(255,255,255,0.15); }
+            .search-button { border-radius: 0 0 16px 16px; padding: 16px; }
+        }
+    
+        .app-container {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    
+
+        .search-container::before {
+            content: "";
+            position: absolute;
+            top: 0; bottom: 0; left: 0;
+            right: var(--btn-w, 260px);
+            border-radius: 16px 0 0 16px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Keep interactive controls above the glass */
+        .search-container > * { position: relative; z-index: 1; }
+
+    
+</style>
+</head>
+<body>
+    <div id="shader-container"></div>
+    
+    <nav class="nav">
+        <div class="nav-logo">DeepDive.ai</div>
+        <div class="nav-links">
+            <!-- <button onclick="scrollToSection('research')">Research</button> -->
+            <button id="downloadBtn" title="Download the most recent PDF" disabled>Download Report</button>
+            <button onclick="window.open('https://github.com', '_blank')">GitHub</button>
+        </div>
+    </nav>
+
+    <div class="app-container">
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-headline">Deep Research</h1>
+            <p class="hero-subheadline">AI-powered research assistant that explores, analyzes, and delivers comprehensive insights</p>
+            
+            <div class="search-container">
+                <textarea 
+                    id="query" 
+                    class="search-textarea"
+                    placeholder="Enter a topic you'd like to research..."
+                    rows="1"
+                ></textarea>
+                <button id="submitBtn" class="search-button">
+                    <span id="btnText">Start Research</span>
+                    <span id="spinner" class="spinner" style="display: none;"></span>
+                </button>
+            </div>
+            
+            <div id="status" class="status-message"></div>
+            
+            <div id="reportContainer" class="report-container">
+                <h2 class="report-header">Research Report</h2>
+                <div id="report" class="report-content"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Background shader from uploaded index.html -->
+    <script>
+        // P5.js shader setup (from uploaded file)
+        let theShader, dpr = window.devicePixelRatio || 1, ww = window.innerWidth*dpr, wh = window.innerHeight*dpr;
+
+        // Vertex shader code
+        const vertSource = `#version 300 es 
+in vec3 aPosition; 
+void main() { 
+    gl_Position=vec4(aPosition*2.-1., 1.0); 
+}`;
+
+        // Fragment shader code
+        const fragSource = `#version 300 es
+precision highp float;
+out vec4 O;
+uniform float time;
+uniform vec2 resolution;
+#define FC gl_FragCoord.xy
+#define R resolution
+#define T ((3600.+time)*.8)
+#define S smoothstep
+#define SE(v,s) S(s+1./MN,s-1./MN,v)
+#define MN min(R.x,R.y)
+#define lum(a) vec3(dot(vec3(.21,.71,.07),a))
+#define hue(a) (.25+.6*cos(3.14*clamp(a,2.8,3.6)+vec3(0,83,21)))
+#define rot(a) mat2(cos((a)-vec4(0,11,33,0)))
+
+float rnd(vec2 p) {
+    p=fract(p*vec2(12.9898,78.233));
+    p+=dot(p,p+34.56);
+    return fract(p.x*p.y);
+}
+
+float noise(vec2 p) {
+    vec2 i=floor(p), f=fract(p), u=f*f*(3.-2.*f);
+    float a=rnd(i), b=rnd(i+vec2(1,0)), c=rnd(i+vec2(0,1)), d=rnd(i+1.);
+    return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);
+}
+
+float fbm(vec2 p) {
+    float t=.0, a=1.; 
+    mat2 m=mat2(1.2,-.8,.8,1.2);
+    for (float i=.0; i<6.; i++) {
+        t+=a*noise(p);
+        p=2.*p*m;
+        a*=.5;
+    }
+    return t;
+}
+
+vec2 smin(vec2 a, vec2 b, float k) {
+    vec2 h=clamp(.5+.5*(b-a)/k,.0,1.);
+    return mix(b,a,h)-k*h*(1.-h);
+}
+
+float logo(vec2 uv) {
+    vec3 col=vec3(0);
+    uv*=5.;
+    vec2 p=vec2(sin(T+uv.y), cos(T+uv.x))*.75;
+    return 1.-SE(cos(1.9-sin(length(p)/(.55+length(uv)))),.1);
+}
+
+float placeLogo() {
+    vec2 p=FC/R;
+    p*=vec2(R.x/R.y,1);
+    p-=vec2(R.x/R.y,0);
+    p+=vec2(.08,-.075);
+    return logo(p*12.);
+}
+
+void main() {
+    vec2 uv=(FC-.5*R)/MN, p=(FC/MN);
+    vec3 col=vec3(0);
+    p+=vec2(2.75,-2.75);
+    p*=rot(-1.5707*2.5);
+    p=smin(p,-uv,1.5);
+    p*=rot(.39);
+    p.x+=.8;
+    p*=.5;
+    float k=fbm(p*noise(uv*.2*fbm(p-T*.2)+T*.02)+.125*fbm(T*.01-p*2.+.5*fbm(T*.03-p*3.+.5*fbm(p*6.-T*.2))));
+    vec3 d=mix(vec3(0),hue(2.8+k),k);
+    col+=lum(d)+d;
+    col/=1.+exp(-col*col*col);
+    col=pow(col,vec3(.4545));
+    p=(FC-.5*R)/R;
+    col=mix(vec3(0,.05,.2),col,pow(S(.45,.0,dot(p*p,p*p)),12.));
+    col=max(col,.1);
+    col=max(col,vec3(.1,.2,.4)*placeLogo());
+    O=vec4(col,1);
+}`;
+
+        function setup() {
+            let canvas = createCanvas(ww, wh, WEBGL);
+            canvas.parent('shader-container');
+            pixelDensity(1);
+            
+            // Override to enable webgl2
+            const gl = canvas.canvas.getContext('webgl2');
+            if (!gl) {
+                console.error('WebGL2 not supported, falling back to simpler shader');
+                // Use simpler shader for WebGL1
+                theShader = createShader(
+                    `attribute vec3 aPosition;
+                    void main() {
+                        gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0);
+                    }`,
+                    `precision mediump float;
+                    uniform float time;
+                    uniform vec2 resolution;
+                    
+                    float noise(vec2 p) {
+                        return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+                    }
+                    
+                    void main() {
+                        vec2 uv = gl_FragCoord.xy / resolution.xy;
+                        vec2 p = uv * 2.0 - 1.0;
+                        float t = time * 0.5;
+                        float n = noise(p * 3.0 + vec2(t * 0.1));
+                        n += noise(p * 6.0 - vec2(t * 0.2)) * 0.5;
+                        vec3 color = mix(vec3(0.1, 0.2, 0.4), vec3(0.3, 0.4, 0.8), n);
+                        float vignette = 1.0 - length(p) * 0.5;
+                        color *= vignette;
+                        gl_FragColor = vec4(color, 1.0);
+                    }`
+                );
+            } else {
+                theShader = createShader(vertSource, fragSource);
+            }
+        }
+
+        function draw() {
+            if (theShader) {
+                shader(theShader);
+                theShader.setUniform("resolution", [width, height]);
+                theShader.setUniform("time", millis() / 1000.0);
+                rect(0, 0, width, height);
+            }
+        }
+
+        function windowResized() {
+            ww = window.innerWidth * dpr;
+            wh = window.innerHeight * dpr;
+            resizeCanvas(ww, wh);
+        }
+
+        // Override p5.js WebGL context creation for WebGL2 support
+        p5.RendererGL.prototype._initContext = function() {
+            try {
+                this.drawingContext = this.canvas.getContext('webgl2', this._pInst._glAttributes) ||
+                    this.canvas.getContext('experimental-webgl', this._pInst._glAttributes);
+                if (this.drawingContext === null) {
+                    throw new Error('Error creating webgl context');
+                } else {
+                    const gl = this.drawingContext;
+                    gl.enable(gl.DEPTH_TEST);
+                    gl.depthFunc(gl.LEQUAL);
+                    gl.viewport(0, 0, ww, wh);
+                    this._viewport = this.drawingContext.getParameter(this.drawingContext.VIEWPORT);
+                }
+            } catch (er) {
+                throw er;
+            }
+        };
+    </script>
+
+    <script>
+        const queryInput = document.getElementById('query');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const spinner = document.getElementById('spinner');
+        const statusDiv = document.getElementById('status');
+        const reportContainer = document.getElementById('reportContainer');
+        const reportDiv = document.getElementById('report');
+
+        // Placeholder typing effect
+        const prompts = [
+            "Analyze the impact of AI on healthcare innovation",
+            "Research sustainable energy solutions for 2025",
+            "Explore quantum computing breakthroughs",
+            "Investigate remote work productivity trends",
+            "Study blockchain applications in supply chain",
+            "Examine climate change mitigation strategies",
+            "Review advances in gene therapy treatments",
+            "Analyze cryptocurrency market dynamics",
+            "Research mental health in digital age",
+            "Explore space exploration technologies"
+        ];
+
+        let currentPromptIndex = 0, currentCharIndex = 0, isDeleting = false;
+        const typingSpeed = 50, deletingSpeed = 30, pauseBeforeDelete = 3000, pauseBeforeNewPrompt = 500;
+
+		const downloadBtn = document.getElementById('downloadBtn'); // the top-right button
+		let lastPdfUrl = null;                                       // holds the latest PDF URL
+
+		// Clicking the button opens the PDF (if ready)
+		downloadBtn.addEventListener('click', () => {
+			if (!lastPdfUrl) {
+			alert('Report not ready yet — start a research run first.');
+			return;
+			}
+			// Works for relative or absolute URLs
+			window.open(lastPdfUrl, '_blank');
+		});
+
+        function typeEffect() {
+            const currentPrompt = prompts[currentPromptIndex];
+            if (isDeleting) {
+                queryInput.placeholder = currentPrompt.substring(0, currentCharIndex - 1);
+                currentCharIndex--;
+                if (currentCharIndex === 0) {
+                    isDeleting = false;
+                    currentPromptIndex = (currentPromptIndex + 1) % prompts.length;
+                    setTimeout(typeEffect, pauseBeforeNewPrompt);
+                    return;
+                }
+                setTimeout(typeEffect, deletingSpeed);
+            } else {
+                queryInput.placeholder = currentPrompt.substring(0, currentCharIndex + 1);
+                currentCharIndex++;
+                if (currentCharIndex === currentPrompt.length) {
+                    isDeleting = true;
+                    setTimeout(typeEffect, pauseBeforeDelete);
+                    return;
+                }
+                setTimeout(typeEffect, typingSpeed);
+            }
+        }
+
+        typeEffect();
+
+        // Handle form submission
+        submitBtn.addEventListener('click', startResearch);
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                startResearch();
+            }
+        });
+
+        async function startResearch() {
+			lastPdfUrl = null;         // forget any previous report
+			downloadBtn.disabled = true;  // keep button disabled until a new PDF is ready
+            const query = queryInput.value.trim();
+            if (!query) {
+                queryInput.focus();
+                return;
+            }
+
+            // Update UI
+            submitBtn.disabled = true;
+            btnText.textContent = 'Researching...';
+            spinner.style.display = 'inline-block';
+            requestAnimationFrame(measureButtonWidth);
+            statusDiv.classList.add('active');
+            statusDiv.textContent = '🔍 Initializing research...';
+            reportContainer.classList.remove('active');
+            reportDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/research', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullReport = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = JSON.parse(line.slice(6));
+                            
+                            if (data.complete) {
+                                statusDiv.textContent = '✅ Research complete!';
+                                setTimeout(() => {
+                                    statusDiv.classList.remove('active');
+                                }, 3000);
+                            } else if (data.content) {
+
+
+								if (data.content.startsWith('PDF ready:')) {
+									const m = data.content.match(/^PDF ready:\s*(\S+)/);
+									if (m && m[1]) {
+										lastPdfUrl = m[1];                           // store the URL
+										if (downloadBtn) downloadBtn.disabled = false; // enable the button if present
+										// Optional: show a clickable status link
+										statusDiv.classList.add('active');
+										statusDiv.innerHTML =
+										'📄 <a href="' + lastPdfUrl + '" target="_blank" style="color:#60a5fa;">Download report PDF</a>';
+									}
+									continue; // move to next streamed line; skip the generic status logic below
+									}
+                                // Update status
+                                if (data.content.includes('View trace:')) {
+                                    statusDiv.innerHTML = data.content.replace(
+                                        /(https:\/\/[^\s]+)/g, 
+                                        '<a href="$1" target="_blank" style="color: #60a5fa;">$1</a>'
+                                    );
+                                } else if (data.content.includes('Email sent')) {
+                                    statusDiv.textContent = '📧 ' + data.content;
+                                } else if (!data.content.startsWith('#') && !data.content.startsWith('*')) {
+                                    statusDiv.textContent = '🔍 ' + data.content;
+                                }
+                                
+                                // Accumulate report content
+                                if (data.content.startsWith('#') || data.content.startsWith('*') || data.content.length > 100) {
+                                    fullReport = data.content;
+                                    reportContainer.classList.add('active');
+                                    reportDiv.innerHTML = marked.parse(fullReport);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.textContent = '❌ Error: ' + error.message;
+                statusDiv.style.borderColor = '#ef4444';
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Start Research';
+                spinner.style.display = 'none';
+                requestAnimationFrame(measureButtonWidth);
+            }
+        }
+
+        // Navigation functions
+        function scrollToSection(section) {
+            if (section === 'research') {
+                document.querySelector('.hero').scrollIntoView({ behavior: 'smooth' });
+            } else if (section === 'report' && reportContainer.classList.contains('active')) {
+                reportContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    
+        // ChatGPT-style auto-growing textarea (with cap)
+        
+        // Autosize: start at EXACT current height; grow to 5 lines, then scroll internally
+        // Measure button width to size the glass panel under the textarea only
+        function measureButtonWidth() {
+            const btn = document.getElementById('submitBtn');
+            const sc = document.querySelector('.search-container');
+            if (!btn || !sc) return;
+            const w = Math.ceil(btn.getBoundingClientRect().width);
+            sc.style.setProperty('--btn-w', w + 'px');
+        }
+        window.addEventListener('load', measureButtonWidth);
+        window.addEventListener('resize', measureButtonWidth);
+        // Also re-measure after fonts load/placeholder typing settles
+        setTimeout(measureButtonWidth, 100);
+        setTimeout(measureButtonWidth, 500);
+        // Keep the glass width in sync whenever the button resizes or its text mutates
+        const resizeObserver = new ResizeObserver(() => measureButtonWidth());
+        resizeObserver.observe(submitBtn);
+
+        const mutationObserver = new MutationObserver(() => measureButtonWidth());
+        mutationObserver.observe(btnText, { childList: true, characterData: true, subtree: true });
+
+    
+
+        // Autosize: match initial height to attached file, expand to 5 lines, then scroll internally
+        
+        // Autosize: use exact attached baseline (empty scrollHeight) then cap at +4 lines
+        (function attachFiveLineAutosize(){
+            const el = document.getElementById('query');
+            if (!el) return;
+            const MAX_LINES = 5;
+
+            function px(n){ return Number.isFinite(n) ? n : 0; }
+
+            function baseAndMax() {
+                const cs = window.getComputedStyle(el);
+                const pad = px(parseFloat(cs.paddingTop)) + px(parseFloat(cs.paddingBottom));
+                let lh = parseFloat(cs.lineHeight);
+                if (!Number.isFinite(lh) || cs.lineHeight === 'normal') {
+                    lh = 1.35 * (parseFloat(cs.fontSize) || 16);
+                }
+                // Measure exact baseline like the attached file:
+                const saved = el.value;
+                el.value = '';            // empty to get single-line baseline
+                el.style.height = 'auto'; // natural height
+                const baseline = el.scrollHeight; // includes padding
+                el.value = saved;
+                const maxH = baseline + (MAX_LINES - 1) * lh; // baseline already 1 line
+                return { baseline, maxH };
+            }
+
+            let limits = null;
+            function apply() {
+                if (!limits) limits = baseAndMax();
+                el.style.height = 'auto';
+                el.style.overflowY = 'hidden';
+                const target = Math.max(limits.baseline, Math.min(el.scrollHeight, limits.maxH));
+                el.style.height = target + 'px';
+                if (el.scrollHeight > limits.maxH) {
+                    el.style.overflowY = 'auto';
+                }
+            }
+
+            ['input','change','cut','paste','keydown','keyup'].forEach(ev => el.addEventListener(ev, apply));
+            window.addEventListener('resize', () => { limits = null; apply(); });
+            setTimeout(apply, 0);
+        })();
+
+</script>
+</body>
+</html>

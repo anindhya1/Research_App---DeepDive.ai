@@ -1,0 +1,19 @@
+# Core dependencies
+openai
+openai-agents
+sendgrid
+python-dotenv
+
+# Web framework
+flask>=2.3.0
+flask-cors>=4.0.0
+
+reportlab
+markdown
+fpdf2
+
+aiofiles>=23.0.0
+
+gunicorn>=21.2
+gevent>=23.9.0
+greenlet>=3.0.0
