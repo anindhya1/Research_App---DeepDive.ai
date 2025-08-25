@@ -25,5 +25,6 @@ ENV PYTHONUNBUFFERED=1
 # Expose container port
 EXPOSE 8000
 
+RUN echo "Debug: PORT environment variable will be: ${PORT:-not-set}"
 # Use gunicorn with gevent but fix the timeout and worker config
 CMD ["gunicorn", "--worker-class", "gevent", "--workers", "1", "--worker-connections", "1000", "--timeout", "300", "--bind", "0.0.0.0:8000", "--access-logfile", "-", "wsgi:app"]
