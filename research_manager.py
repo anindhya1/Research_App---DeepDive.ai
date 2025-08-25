@@ -10,44 +10,44 @@ class ResearchManager:
 
     async def run(self, query: str):
         """ Run the deep research process, yielding the status updates and the final report"""
-        # trace_id = gen_trace_id()
-        # with trace("Research trace", trace_id=trace_id):
-        print(f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}")
-        yield f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}"
-        print("Starting research...")
-        search_plan = await self.plan_searches(query)
-        yield "Searches planned, starting to search..."     
-        search_results = await self.perform_searches(search_plan)
-        yield "Searches complete, generating report..."
-        report = await self.write_report(query, search_results)
-        yield report.markdown_report
-        pdf_result = await Runner.run(
-            download_agent,
-            f"Filename: report.pdf\n\n{report.markdown_report}",
-        )
+        trace_id = gen_trace_id()
+        with trace("Research trace", trace_id=trace_id):
+            print(f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}")
+            yield f"View trace: https://platform.openai.com/traces/trace?trace_id={trace_id}"
+            print("Starting research...")
+            search_plan = await self.plan_searches(query)
+            yield "Searches planned, starting to search..."     
+            search_results = await self.perform_searches(search_plan)
+            yield "Searches complete, generating report..."
+            report = await self.write_report(query, search_results)
+            yield report.markdown_report
+            pdf_result = await Runner.run(
+                download_agent,
+                f"Filename: report.pdf\n\n{report.markdown_report}",
+            )
 
-        url = None
-        out = getattr(pdf_result, "final_output", None)
+            url = None
+            out = getattr(pdf_result, "final_output", None)
 
-        if isinstance(out, dict):
-            url = out.get("url") or out.get("path")
-        elif isinstance(out, str):
-            # try JSON first
-            import json, re
-            try:
-                data = json.loads(out)
-                url = data.get("url") or data.get("path")
-            except Exception:
-                m = re.search(r'(?:https?://\S+\.pdf|/static/\S+\.pdf)', out)
-                url = m.group(0) if m else out.strip()
+            if isinstance(out, dict):
+                url = out.get("url") or out.get("path")
+            elif isinstance(out, str):
+                # try JSON first
+                import json, re
+                try:
+                    data = json.loads(out)
+                    url = data.get("url") or data.get("path")
+                except Exception:
+                    m = re.search(r'(?:https?://\S+\.pdf|/static/\S+\.pdf)', out)
+                    url = m.group(0) if m else out.strip()
 
-        if not url:
-            url = "/static/exports/report.pdf"  # safe default
+            if not url:
+                url = "/static/exports/report.pdf"  # safe default
 
-        yield f"PDF ready: {url}"
-        await self.send_email(report)
-        yield "Email sent, research complete"
-        # yield report.markdown_report
+            yield f"PDF ready: {url}"
+            await self.send_email(report)
+            yield "Email sent, research complete"
+            # yield report.markdown_report
         
 
     async def plan_searches(self, query: str) -> WebSearchPlan:
