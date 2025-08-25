@@ -677,7 +677,7 @@ void main() {
 
         // Handle form submission
         submitBtn.addEventListener('click', startResearch);
-        queryInput.addEventListener('keypress', (e) => {
+        queryInput.addEventListener('keydown', (e) => {
 			if (e.key === 'Enter' && !e.shiftKey) {
 				e.preventDefault();
 				startResearch();
