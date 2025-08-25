@@ -612,6 +612,14 @@ void main() {
 
     <script>
         const queryInput = document.getElementById('query');
+		queryInput.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter' && !e.shiftKey) {
+				e.preventDefault();
+				e.stopImmediatePropagation();
+				startResearch();
+				return false;
+			}
+		}, true);
         const submitBtn = document.getElementById('submitBtn');
         const btnText = document.getElementById('btnText');
         const spinner = document.getElementById('spinner');
@@ -677,12 +685,6 @@ void main() {
 
         // Handle form submission
         submitBtn.addEventListener('click', startResearch);
-        queryInput.addEventListener('keypress', (e) => {
-			if (e.key === 'Enter' && !e.shiftKey) {
-				e.preventDefault();
-				startResearch();
-			}
-		});
 
         async function startResearch() {
 			lastPdfUrl = null;         // forget any previous report
